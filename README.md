@@ -7,6 +7,12 @@
 *This is a generalized framework illustrated with simulated data. It does not
 reference any specific company or proprietary information.*
 
+## What this project demonstrates
+
+- A repeatable decision framework for evaluating coupon-driven first-purchase experiments before long-term LTV fully matures.
+- A way to separate headline lift from customer quality, discount dependency, and borrowed-demand risk.
+- An operating loop that turns early reads into scale / adjust / continue decisions, then updates the next experiment cycle after mature outcomes arrive.
+
 ## The Problem
 
 When an e-commerce platform uses coupons to encourage new users to make their
@@ -143,15 +149,20 @@ improves.
 
 ## How to Run
 
-```
+```bash
 python -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+# Windows
 .venv\Scripts\activate
+
 pip install -r requirements.txt
-py src\simulate.py
-jupyter notebook notebooks\coupon_experiment_walkthrough.ipynb
+python src/simulate.py
+jupyter notebook notebooks/coupon_experiment_walkthrough.ipynb
 ```
 
-`src\simulate.py` regenerates the simulated dataset (seeded and deterministic),
+`src/simulate.py` regenerates the simulated dataset (seeded and deterministic),
 and the notebook then walks through the five stages end to end.
 
 ## Scope and Limitations
@@ -160,8 +171,8 @@ This is a portfolio project that demonstrates a repeatable decision framework, s
 its boundaries are stated explicitly by design:
 
 - This is **simulated** data, not production data. The results are illustrative.
-- The project demonstrates a repeatable **decision framework**, not a validated
-  production model.
+- The project demonstrates a repeatable **decision framework**, not a production
+  model.
 - `realized_ltv_180d` is defined as `net_revenue_180d`, a simplified
   realized-value proxy.
 - The current simulated dataset does not include post-purchase engagement

@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import numpy as np
 import pandas as pd
 
 # --- Column groups this stage is allowed to see --------------------------------
@@ -55,6 +56,7 @@ PRIMARY_METRIC = "made_first_purchase_30d"
 # --- Thresholds (documented and conservative) ----------------------------------
 SAMPLE_RATIO_TOLERANCE = 0.02   # control share must sit within 50% +/- 2pp
 CHI2_CRIT_DF1 = 3.841           # chi-square 0.05 critical value, df=1 (no scipy needed)
+Z_CRIT_95 = 1.96                # standard normal two-sided 0.05 critical value (no scipy)
 MAX_MISSINGNESS = 0.05          # >5% missing in a populated field is a flag
 HIGH_SHARE_THRESHOLD = 0.50     # a band "dominates" a cohort when >50% read that way
 COHORT_DELTA_PP = 10.0          # a treatment-vs-control mix gap this large is meaningful
@@ -208,24 +210,54 @@ def gate0_data_quality(df: pd.DataFrame) -> GateResult:
 
 # --- Gate 1: Primary Metric Check ----------------------------------------------
 def gate1_primary_metric(df: pd.DataFrame) -> GateResult:
-    # Gate 1 answers only one question: did the short-term target move? It does
-    # NOT speak to whether the lift is durable or valuable - that is what Gates
-    # 2-4 and the Stage 5 backtest are for.
-    control_rate = float(df.loc[df["group"] == "control", PRIMARY_METRIC].mean())
-    treatment_rate = float(df.loc[df["group"] == "treatment", PRIMARY_METRIC].mean())
-    lift_pp = (treatment_rate - control_rate) * 100.0
-    has_lift = treatment_rate > control_rate
+    # Gate 1 answers only one question: did the short-term target move by more
+    # than sampling noise? It does NOT speak to whether the lift is durable or
+    # valuable - that is what Gates 2-4 and the Stage 5 backtest are for.
+    control = df.loc[df["group"] == "control", PRIMARY_METRIC]
+    treatment = df.loc[df["group"] == "treatment", PRIMARY_METRIC]
+    n_c, n_t = int(control.shape[0]), int(treatment.shape[0])
+    control_rate = float(control.mean())
+    treatment_rate = float(treatment.mean())
+    lift = treatment_rate - control_rate
+    lift_pp = lift * 100.0
+
+    # Two-proportion z-test against H0: equal rates, using the POOLED standard
+    # error. Implemented by hand (numpy only, no scipy).
+    pooled = float((control.sum() + treatment.sum()) / (n_c + n_t))
+    pooled_se = float(np.sqrt(pooled * (1.0 - pooled) * (1.0 / n_c + 1.0 / n_t)))
+    z = lift / pooled_se if pooled_se > 0 else 0.0
+
+    # Approximate 95% CI for the lift, using the UNPOOLED standard error.
+    unpooled_se = float(np.sqrt(
+        control_rate * (1.0 - control_rate) / n_c
+        + treatment_rate * (1.0 - treatment_rate) / n_t
+    ))
+    ci_lo_pp = (lift - Z_CRIT_95 * unpooled_se) * 100.0
+    ci_hi_pp = (lift + Z_CRIT_95 * unpooled_se) * 100.0
+
+    # A primary lift "exists" only if it is positive AND clears the z>1.96 bar.
+    has_lift = lift > 0 and z > Z_CRIT_95
     summary = (
-        f"30d first-purchase rate: control {control_rate:.2%} vs treatment {treatment_rate:.2%} "
-        f"(lift {lift_pp:+.2f}pp). "
-        + ("Primary lift exists." if has_lift else "No primary lift.")
+        f"30d first-purchase rate: control {control_rate:.2%} (n={n_c:,}) vs "
+        f"treatment {treatment_rate:.2%} (n={n_t:,}); lift {lift_pp:+.2f}pp "
+        f"(95% CI [{ci_lo_pp:+.2f}, {ci_hi_pp:+.2f}]pp, z={z:.2f}). "
+        + ("Primary lift exists (positive and z>1.96)." if has_lift
+           else "No significant primary lift (lift<=0 or z<=1.96).")
     )
     return GateResult(
         "Gate 1",
         "Primary Metric Check",
         has_lift,
         summary,
-        metrics={"control_rate": control_rate, "treatment_rate": treatment_rate, "lift_pp": lift_pp},
+        metrics={
+            "control_rate": control_rate,
+            "treatment_rate": treatment_rate,
+            "lift_pp": lift_pp,
+            "z": z,
+            "ci95_pp": (ci_lo_pp, ci_hi_pp),
+            "n_control": n_c,
+            "n_treatment": n_t,
+        },
     )
 
 
