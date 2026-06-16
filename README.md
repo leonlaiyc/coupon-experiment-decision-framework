@@ -83,3 +83,78 @@ This closes the loop. Signals that predicted durable value can be weighted more
 heavily in future experiments. Signals that failed can be adjusted, replaced, or
 removed. Over time, the framework becomes a learning system rather than a
 one-off analysis.
+
+## Framework Flow
+
+The structure stays fixed across experiments; the method inside each stage can
+improve over time. Stage 4 is where the flow branches into a decision, and
+Stage 5 feeds what it learns back into the next cycle.
+
+```
+Stage 1  Measurement Design
+   |  primary metric, guardrails, holdout, observation windows, post-period tracking
+   v
+Stage 2  Early Signal Layer
+   |  observable behaviour -> transparent derived signals (0-1 percentile scale)
+   v
+Stage 3  Early Read Model
+   |  signals -> high / medium / low reads (quality, borrowed risk, discount dependency)
+   v
+Stage 4  Decision Tree
+   |  Gate 0  data quality ----fail----> do not decide; fix instrumentation
+   |  Gate 1  primary lift ----none----> Stop / redesign offer
+   |  Gate 2  discount dependency (early risk proxy)
+   |  Gate 3  quality mix
+   |  Gate 4  borrowed-risk mix
+   |  Gate 5  combine --> Scale | Scale selectively / Adjust | Adjust | Continue | Stop
+   v
+Stage 5  Backtest, Calibration & Monitoring
+   |  5A backtest reads vs mature long-term outcomes
+   |  5B next-cycle operating update (stage-by-stage changes for the next cycle)
+   |  5C post-launch monitoring design (mode the framework would enter if scaled)
+   v
+Next experiment  (improved signals, gates, and targeting)
+```
+
+## Upgradability
+
+Stage 3 (the Early Read model) is intentionally modular. Version 1 is a
+transparent, rule-based read: every score is a simple, inspectable combination of
+observable signals. Because the rest of the framework depends only on the *read
+columns* Stage 3 emits (`quality_read`, `borrowed_risk_read`,
+`discount_dependency_read`), that rule-based v1 can later be replaced by a
+statistical model or a machine-learning model without changing Stages 1, 2, 4,
+or 5. The framework flow stays the same; only the method inside the stage
+improves.
+
+## How to Run
+
+```
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+py src\simulate.py
+jupyter notebook notebooks\coupon_experiment_walkthrough.ipynb
+```
+
+`src\simulate.py` regenerates the simulated dataset (seeded and deterministic),
+and the notebook then walks through the five stages end to end.
+
+## Scope and Limitations
+
+This is a portfolio project that demonstrates a repeatable decision framework, so
+its boundaries are stated explicitly by design:
+
+- This is **simulated** data, not production data. The results are illustrative.
+- The project demonstrates a repeatable **decision framework**, not a validated
+  production model.
+- `realized_ltv_180d` is defined as `net_revenue_180d`, a simplified
+  realized-value proxy.
+- The current simulated dataset does not include post-purchase engagement
+  signals.
+- Post-launch monitoring requires rolling cohort data with fields such as
+  `period` and `strategy_version`; the current single snapshot does not have them.
+- Stage 3 is a transparent rule-based v1 and is intentionally replaceable.
+
+Before real deployment, this would require real data, rolling cohorts, and
+production metrics for validation.
