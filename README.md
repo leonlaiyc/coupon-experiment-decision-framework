@@ -74,6 +74,22 @@ stop.
 The output should make the reasoning explicit, including what supports the
 decision, what remains uncertain, and what should be monitored next.
 
+The decision rule, in short:
+
+| Situation | Decision |
+|---|---|
+| Data quality / readiness fails | Do not decide yet |
+| No primary lift | Stop or redesign offer |
+| Lift + strong quality + low borrowed risk + acceptable dependency | Scale |
+| Lift + weak quality + high borrowed risk + high/elevated dependency | Adjust, not broad scale |
+| Lift + inconclusive signals | Continue measurement |
+| Lift + mixed evidence | Scale selectively / Adjust |
+
+Extreme cases have clear rules; mixed cases are intentionally routed to selective
+rollout, adjustment, or further measurement rather than being over-automated. The
+framework provides guardrails, not a lookup table that fully automates every
+business decision.
+
 ### Stage 5: Backtest and Calibration Loop
 
 Once LTV and repeat behavior mature, compare the early read with actual long-term
