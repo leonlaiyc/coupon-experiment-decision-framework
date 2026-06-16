@@ -74,20 +74,18 @@ stop.
 The output should make the reasoning explicit, including what supports the
 decision, what remains uncertain, and what should be monitored next.
 
-The decision rule, in short:
+Once the data-quality and primary-lift checks pass, the decision runs in three
+lanes:
 
-| Situation | Decision |
-|---|---|
-| Data quality / readiness fails | Do not decide yet |
-| No primary lift | Stop or redesign offer |
-| Lift + strong quality + low borrowed risk + acceptable dependency | Scale |
-| Lift + weak quality + high borrowed risk + high/elevated dependency | Adjust, not broad scale |
-| Lift + inconclusive signals | Continue measurement |
-| Lift + mixed evidence | Scale selectively / Adjust |
+- **Green — Scale:** lift with strong early quality, low borrowed-demand risk, and
+  acceptable discount dependency — broaden rollout, but keep a holdout.
+- **Amber — Adjust:** lift is real but the cohort shows weak quality, high
+  borrowed-risk read, or high discount dependency — adjust targeting, incentive,
+  or measurement window before scaling.
+- **Grey — Selective / Continue:** mixed evidence (e.g. strong quality but
+  elevated dependency) — scale selectively, keep a holdout, and keep measuring.
 
-Extreme cases have clear rules; mixed cases are intentionally routed to selective
-rollout, adjustment, or further measurement rather than being over-automated. The
-framework provides guardrails, not a lookup table that fully automates every
+The framework provides guardrails, not a lookup table that fully automates every
 business decision.
 
 ### Stage 5: Backtest and Calibration Loop
