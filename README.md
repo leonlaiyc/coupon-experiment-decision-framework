@@ -80,19 +80,12 @@ stop.
 The output should make the reasoning explicit, including what supports the
 decision, what remains uncertain, and what should be monitored next.
 
-Once the data-quality and primary-lift checks pass, the decision runs in three
-lanes:
+The decision logic uses three lanes:
+- **Green:** scale only when lift is supported by strong quality, low borrowed-risk read, and acceptable dependency.
+- **Amber:** adjust when lift exists but quality, borrowed-risk, or dependency signals are unfavorable.
+- **Grey:** use selective rollout or more measurement when evidence is mixed.
 
-- **Green — Scale:** lift with strong early quality, low borrowed-demand risk, and
-  acceptable discount dependency — broaden rollout, but keep a holdout.
-- **Amber — Adjust:** lift is real but the cohort shows weak quality, high
-  borrowed-risk read, or high discount dependency — adjust targeting, incentive,
-  or measurement window before scaling.
-- **Grey — Selective / Continue:** mixed evidence (e.g. strong quality but
-  elevated dependency) — scale selectively, keep a holdout, and keep measuring.
-
-The framework provides guardrails, not a lookup table that fully automates every
-business decision.
+The framework provides guardrails, not a lookup table that automates every business decision.
 
 ### Stage 5: Backtest and Calibration Loop
 
