@@ -4,9 +4,10 @@ Stage 5 is the calibration loop. It has three parts:
 
     5A  Backtest    - compare the Stage 3 early reads against mature long-term
                       outcomes (this module).
-    5B  Calibration - turn backtest findings into concrete next-cycle updates
-                      (``next_cycle_updates`` here).
-    5C  Monitoring  - ongoing tracking once a change ships (future work).
+    5B  Operating   - turn the backtest readout into concrete, stage-by-stage
+        update        next-cycle updates (``next_cycle_updates`` here).
+    5C  Monitoring  - post-launch monitoring design once a strategy is scaled
+                      (``src/monitoring.py``).
 
 This is the first stage allowed to OPEN the long-term outcome fields
 (repeat_purchase_180d, orders_180d, net_revenue_180d, realized_ltv_180d, ...).
@@ -107,27 +108,51 @@ def run_backtest(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
 
 
 def next_cycle_updates() -> pd.DataFrame:
-    """Stage 5B - the next-cycle calibration table (concept, no weight tuning).
+    """Stage 5B - the next-cycle operating update (process, not weight tuning).
 
-    Each backtest finding maps to a concrete update and the stage it affects.
-    This is the closing of the loop: what this cycle learned becomes next cycle's
-    improvement. It deliberately does NOT auto-tune weights or thresholds.
+    Each row maps one observation from this cycle to how a specific stage changes
+    in the next cycle - the same five columns shown in the notebook's Stage 5B
+    table. This is the loop closing: what this cycle learned becomes next cycle's
+    improvement, stage by stage. It deliberately does NOT auto-tune weights or
+    thresholds.
     """
     rows = [
-        ("High discount dependency aligns with weaker LTV",
-         "Promote discount dependency to a stronger guardrail", "Stage 1 / 4"),
+        ("Treatment lift exists, but treatment purchasers show weaker quality mix",
+         "Coupon has short-term lift, but broad scaling is not justified yet",
+         "Predefine target segments before next test",
+         "Compare early quality mix by segment",
+         "Lift alone cannot trigger Scale"),
+        ("High discount dependency aligns with weaker long-term value in this simulated case",
+         "Discount dependency is an important early risk proxy",
+         "Add discount dependency as a stronger guardrail",
+         "Keep discount dependency read; consider adding full-price repeat signal",
+         "Gate 2 becomes a stronger guardrail before Scale"),
+        ("High borrowed-risk read aligns with weaker post-period orders in this walkthrough",
+         "Borrowed-risk read should limit broad rollout until longer outcomes mature",
+         "Keep holdout and define 31-180d tracking window",
+         "Keep timing x weak engagement x discount dependency as combined risk logic",
+         "High borrowed risk blocks broad Scale"),
         ("Early timing alone is insufficient",
-         "Keep timing only as a combined risk signal", "Stage 3"),
-        ("Engagement offsets timing risk",
-         "Preserve engagement as a risk reducer", "Stage 3"),
-        ("Treatment lift comes with weaker quality mix",
-         "Adjust targeting before broad scale", "Stage 4"),
-        ("Observable fields lack post-purchase engagement",
-         "Add post-purchase engagement tracking", "Stage 1 / 2"),
-        ("Long-term outcomes mature slowly",
-         "Keep holdout and define follow-up windows", "Stage 1 / 5"),
+         "Fast conversion is not automatically bad",
+         "Track timing, but do not use it as a standalone decision metric",
+         "Timing remains only one input in the combined risk score",
+         "Gate 4 cannot be triggered by timing alone"),
+        ("Current data lacks post-purchase engagement",
+         "The next test needs stronger early quality evidence",
+         "Add post-purchase engagement tracking after first order",
+         "Add post-purchase sessions / repeat browsing as new signals",
+         "Scale condition becomes stricter if post-purchase engagement is weak"),
     ]
-    return pd.DataFrame(rows, columns=["Backtest finding", "Next-cycle update", "Stage affected"])
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "This cycle observation",
+            "Framework interpretation",
+            "Next Stage 1 update",
+            "Next Stage 2/3 update",
+            "Next Stage 4 update",
+        ],
+    )
 
 
 def _main() -> None:
@@ -165,7 +190,7 @@ def _main() -> None:
         print(f"\n{title}")
         print(tables[key].to_string())
     print("\n" + "=" * 72)
-    print("STAGE 5B - CALIBRATION (next-cycle updates)")
+    print("STAGE 5B - NEXT-CYCLE OPERATING UPDATE")
     print("=" * 72)
     print(next_cycle_updates().to_string(index=False))
 
